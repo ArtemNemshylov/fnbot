@@ -1,0 +1,13 @@
+services:
+  fnbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fnbot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Warsaw
+    volumes:
+      - ./data:/data
