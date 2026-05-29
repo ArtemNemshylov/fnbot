@@ -109,22 +109,27 @@ def parce_stat(resp, username):
     return message
 
 
-def get_fn_user_stats_raw(username):
-    account_types = [None, 'psn', 'xbl']
-    for account_type in account_types:
-        url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}"
-        if account_type:
-            url += f"&accountType={account_type}"
+def get_fn_user_stats_raw(username, account_type=None):
+    """Returns (stats_dict, account_type) or None on failure."""
+    if account_type is not None:
+        url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}&timeWindow=lifetime"
+        url += f"&accountType={account_type}"
         response = api_request(url, "GET")
         if response.status_code == 200:
             data = response.json()['data']['stats']['all']['overall']
-            return {
-                'kills': data['kills'],
-                'deaths': data['deaths'],
-                'wins': data['wins'],
-                'matches': data['matches'],
-                'minutes': data['minutesPlayed'],
-            }
+            return {'kills': data['kills'], 'deaths': data['deaths'], 'wins': data['wins'],
+                    'matches': data['matches'], 'minutes': data['minutesPlayed']}, account_type
+        return None
+
+    for acct in [None, 'psn', 'xbl']:
+        url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}&timeWindow=lifetime"
+        if acct:
+            url += f"&accountType={acct}"
+        response = api_request(url, "GET")
+        if response.status_code == 200:
+            data = response.json()['data']['stats']['all']['overall']
+            return {'kills': data['kills'], 'deaths': data['deaths'], 'wins': data['wins'],
+                    'matches': data['matches'], 'minutes': data['minutesPlayed']}, acct
         if response.status_code == 403:
             return None
     return None
@@ -147,9 +152,12 @@ def get_fn_user_daily_info(username, user_id, db):
             "Якщо ти щойно зареєструвався — завтра вже буде 🙂"
         )
 
-    current = get_fn_user_stats_raw(username)
-    if current is None:
+    # snapshot = (kills, deaths, wins, matches, minutes, account_type)
+    saved_account_type = snapshot[5]
+    result = get_fn_user_stats_raw(username, account_type=saved_account_type)
+    if result is None:
         return 'Треба відкрити стату або такого користувача не знайдено'
+    current, _ = result
 
     kills = current['kills'] - snapshot[0]
     deaths = current['deaths'] - snapshot[1]

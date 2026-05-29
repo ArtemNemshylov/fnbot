@@ -13,8 +13,13 @@ class DataBaseConnection:
             wins INTEGER,
             matches INTEGER,
             minutes INTEGER,
+            account_type TEXT,
             PRIMARY KEY (user_id, snapshot_date)
         )''')
+        try:
+            self.connection.execute("ALTER TABLE daily_snapshots ADD COLUMN account_type TEXT")
+        except sqlite3.OperationalError:
+            pass
 
 
 

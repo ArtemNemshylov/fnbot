@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
 from keyboards.order_keyboard import *
-from api.fn_api import get_fn_user_info, get_fn_user_daily_info
+from api.fn_api import get_fn_user_info, get_fn_user_daily_info, get_fn_user_stats_raw, today_kyiv
 from api.fn_downdetector import get_fortnite_statuses_ua
 from database.db_manipulations import UsersDB
 
@@ -104,6 +104,25 @@ async def today_stat(message: Message, state: FSMContext):
     await message.answer(text=ans, parse_mode="HTML", reply_markup=back_button_keyboard())
 
 
+@router.message(Command(commands='reset_daily'))
+async def reset_daily_snapshot(message: Message):
+    username = db.get_user_order_number(message.from_user.id)
+    if username is None:
+        await message.answer(text='Спочатку введи свій Fn нікнейм.')
+        return
+    today = today_kyiv()
+    db.delete_daily_snapshot(message.from_user.id, today)
+    result = get_fn_user_stats_raw(username)
+    if result is None:
+        await message.answer(text='Не вдалося отримати статистику для нового снепшоту.')
+        return
+    stats, account_type = result
+    db.save_daily_snapshot(message.from_user.id, today, stats['kills'], stats['deaths'],
+                           stats['wins'], stats['matches'], stats['minutes'], account_type)
+    await message.answer(text='✅ Снепшот скинуто і перезнято прямо зараз.',
+                         reply_markup=back_button_keyboard())
+
+
 @router.message(Command(commands='help'))
 async def process_help_command(message: Message):
-    await message.answer(text='/new - змінити нікнейм\n')
+    await message.answer(text='/new - змінити нікнейм\n/reset_daily - скинути денний снепшот\n')
