@@ -21,9 +21,13 @@ async def process_start_command(message: Message, state: FSMContext):
     await state.set_state(Order_status.save_username)
 
 
-@router.message(F.text == 'Оновити стату')
+@router.message(StateFilter("*"), F.text == 'Оновити стату')
 async def update_start_bot(message: Message, state: FSMContext):
     username = db.get_user_order_number(message.from_user.id)
+    if username is None:
+        await message.answer(text='Спочатку введи свій Fn нікнейм:')
+        await state.set_state(Order_status.save_username)
+        return
     ans = get_fn_user_info(username)
     await message.answer(text=ans, reply_markup=back_button_keyboard())
     await state.clear()
@@ -45,26 +49,43 @@ async def ping_fn(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(F.text == 'Стата за цей сезон')
+@router.message(StateFilter("*"), F.text == 'Стата за цей сезон')
 async def last_season_stat(message: Message, state: FSMContext):
     username = db.get_user_order_number(message.from_user.id)
+    if username is None:
+        await message.answer(text='Спочатку введи свій Fn нікнейм:')
+        await state.set_state(Order_status.save_username)
+        return
     ans = get_fn_user_info(username, "season")
     await message.answer(text=ans, reply_markup=back_button_keyboard())
 
 
-@router.message(F.text == 'Статус Fortnite')
+STATUS_EMOJI = {
+    "Працює": "🟢",
+    "Технічне обслуговування": "🔧",
+    "Погіршена робота": "🟡",
+    "Частковий збій": "🟠",
+    "Масовий збій": "🔴",
+}
+
+
+@router.message(StateFilter("*"), F.text == 'Статус Fortnite')
 async def Status(message: Message, state: FSMContext):
     try:
         statuses = get_fortnite_statuses_ua()
 
+        def fmt(key):
+            val = statuses.get(key, 'Невідомо')
+            return f"{STATUS_EMOJI.get(val, '⚪')} {val}"
+
         ans = (
-            "Статус Fortnite\n\n"
-            f"Друзі, групи та повідомлення: {statuses.get('Друзі, групи та повідомлення', 'Невідомо')}\n"
-            f"Голосовий чат: {statuses.get('Голосовий чат', 'Невідомо')}\n"
-            f"Пошук матчу: {statuses.get('Пошук матчу', 'Невідомо')}"
+            "<b>🎮 Статус Fortnite</b>\n\n"
+            f"👥 Друзі, групи та повідомлення\n{fmt('Друзі, групи та повідомлення')}\n\n"
+            f"🎙 Голосовий чат\n{fmt('Голосовий чат')}\n\n"
+            f"🔍 Пошук матчу\n{fmt('Пошук матчу')}"
         )
 
-        await message.answer(text=ans, reply_markup=back_button_keyboard())
+        await message.answer(text=ans, parse_mode="HTML", reply_markup=back_button_keyboard())
     except Exception as e:
         await message.answer(
             text=f"Не вдалося отримати статус Fortnite: {e}",

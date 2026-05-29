@@ -48,9 +48,8 @@ class UsersDB:
     def get_user_order_number(self, user_id):
         query = "SELECT username FROM users WHERE user_id = ?"
         row = self.db_connection.fetchone(query, user_id)
-        log.info(f'Username: {row}')
-        log.info(type(row))
-
+        if row is None:
+            return None
         return str(row[0])
 
 
