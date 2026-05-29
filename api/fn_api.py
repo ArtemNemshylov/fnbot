@@ -109,6 +109,70 @@ def parce_stat(resp, username):
     return message
 
 
+def get_fn_user_stats_raw(username):
+    account_types = [None, 'psn', 'xbl']
+    for account_type in account_types:
+        url = f"https://fortnite-api.com/v2/stats/br/v2?name={username}"
+        if account_type:
+            url += f"&accountType={account_type}"
+        response = api_request(url, "GET")
+        if response.status_code == 200:
+            data = response.json()['data']['stats']['all']['overall']
+            return {
+                'kills': data['kills'],
+                'deaths': data['deaths'],
+                'wins': data['wins'],
+                'matches': data['matches'],
+                'minutes': data['minutesPlayed'],
+            }
+        if response.status_code == 403:
+            return None
+    return None
+
+
+def today_kyiv():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("Europe/Kyiv")).date().isoformat()
+
+
+def get_fn_user_daily_info(username, user_id, db):
+    today = today_kyiv()
+
+    snapshot = db.get_daily_snapshot(user_id, today)
+    if snapshot is None:
+        return (
+            "📅 <b>Стата за сьогодні ще не готова</b>\n\n"
+            "Снепшот робиться автоматично о 00:00 за київським часом.\n"
+            "Якщо ти щойно зареєструвався — завтра вже буде 🙂"
+        )
+
+    current = get_fn_user_stats_raw(username)
+    if current is None:
+        return 'Треба відкрити стату або такого користувача не знайдено'
+
+    kills = current['kills'] - snapshot[0]
+    deaths = current['deaths'] - snapshot[1]
+    wins = current['wins'] - snapshot[2]
+    matches = current['matches'] - snapshot[3]
+    minutes = current['minutes'] - snapshot[4]
+    kd = round(kills / deaths, 2) if deaths > 0 else kills
+
+    if matches == 0:
+        return f"<b>📅 Стата за сьогодні</b>\n\n{username} ще не грав сьогодні 😴"
+
+    return (
+        f"<b>📅 {username} — за сьогодні</b>\n"
+        f"{'🎮' * min(len(username), 10)}\n\n"
+        f"🔫 Вбивств: {kills}\n"
+        f"💀 Смертей: {deaths}\n"
+        f"⚔️ КД: {kd}\n"
+        f"🏆 Перемог: {wins}\n"
+        f"🎯 Матчів: {matches}\n"
+        f"⏱ Часу витрачено: {round(minutes / 60, 1)} год"
+    )
+
+
 if __name__ == '__main__':
     log.info('Starting...')
     get_fn_user_info('dmitryshane')

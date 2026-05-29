@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
 from keyboards.order_keyboard import *
-from api.fn_api import get_fn_user_info
+from api.fn_api import get_fn_user_info, get_fn_user_daily_info
 from api.fn_downdetector import get_fortnite_statuses_ua
 from database.db_manipulations import UsersDB
 
@@ -91,6 +91,17 @@ async def Status(message: Message, state: FSMContext):
             text=f"Не вдалося отримати статус Fortnite: {e}",
             reply_markup=back_button_keyboard()
         )
+
+
+@router.message(StateFilter("*"), F.text == 'Стата за сьогодні')
+async def today_stat(message: Message, state: FSMContext):
+    username = db.get_user_order_number(message.from_user.id)
+    if username is None:
+        await message.answer(text='Спочатку введи свій Fn нікнейм:')
+        await state.set_state(Order_status.save_username)
+        return
+    ans = get_fn_user_daily_info(username, message.from_user.id, db)
+    await message.answer(text=ans, parse_mode="HTML", reply_markup=back_button_keyboard())
 
 
 @router.message(Command(commands='help'))

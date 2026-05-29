@@ -5,6 +5,16 @@ class DataBaseConnection:
     def __init__(self, dbname):
         self.connection = sqlite3.connect(dbname)
         self.connection.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER, username TEXT)''')
+        self.connection.execute('''CREATE TABLE IF NOT EXISTS daily_snapshots (
+            user_id INTEGER,
+            snapshot_date TEXT,
+            kills INTEGER,
+            deaths INTEGER,
+            wins INTEGER,
+            matches INTEGER,
+            minutes INTEGER,
+            PRIMARY KEY (user_id, snapshot_date)
+        )''')
 
 
 

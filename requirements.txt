@@ -3,3 +3,4 @@ environs~=9.5.0
 python-dotenv~=1.0.0
 psycopg2-binary
 requests
+apscheduler

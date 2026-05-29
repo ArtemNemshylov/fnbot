@@ -52,6 +52,23 @@ class UsersDB:
             return None
         return str(row[0])
 
+    def get_all_users(self):
+        query = "SELECT user_id, username FROM users"
+        with self.db_connection.connection:
+            cursor = self.db_connection.connection.cursor()
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            cursor.close()
+        return rows
+
+    def get_daily_snapshot(self, user_id, date):
+        query = "SELECT kills, deaths, wins, matches, minutes FROM daily_snapshots WHERE user_id = ? AND snapshot_date = ?"
+        return self.db_connection.fetchone(query, user_id, date)
+
+    def save_daily_snapshot(self, user_id, date, kills, deaths, wins, matches, minutes):
+        query = "INSERT OR IGNORE INTO daily_snapshots (user_id, snapshot_date, kills, deaths, wins, matches, minutes) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        self.db_connection.execute(query, user_id, date, kills, deaths, wins, matches, minutes)
+
 
 
 
